@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Stanmore.API/Stanmore.API.csproj" />
+  <Project Path="Stanmore.Consumer/Stanmore.Consumer.csproj" />
+</Solution>
