@@ -55,7 +55,7 @@ public class SubscriptionEventParser
             "REFUND_REVERSED" => EventType.RefundReversed,
             "VIRTUAL_CURRENCY_TRANSACTION" => EventType.VirtualCurrencyTransaction,
             "EXPERIMENT_ENROLLMENT" => EventType.Experiment_Enrollment,
-            _ => Result.Failure<EventType>($"Unhandled RevenueCat event type: {type}")
+            _ => Result.Failure<EventType>($"Unhandled RevenueCat event type: {type}.")
         };
     }
 }
