@@ -80,6 +80,7 @@ public class PremiumUserRepository : IPremiumUserRepository
     public async Task<Result> UpdatePremiumUserExpiryTimeAsync(Guid userId, DateTime premiumExpires)
     {
         var update = Builders<PremiumUser>.Update
+               .Set(x => x.UpdatedAt, DateTime.UtcNow)
                .Set(x => x.PremiumExpiresAt, premiumExpires);
 
         try
