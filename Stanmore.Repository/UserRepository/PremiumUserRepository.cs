@@ -15,12 +15,12 @@ public class PremiumUserRepository : IPremiumUserRepository
         IOptions<DatabaseOptions> options,
         ILogger<PremiumUserRepository> logger)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(mongoDatabase);
-
-        _premiumUserCollection = mongoDatabase.GetCollection<PremiumUser>(options.Value.Collection);
+        ArgumentNullException.ThrowIfNull(options, nameof(options));
+        ArgumentNullException.ThrowIfNull(mongoDatabase, nameof(mongoDatabase));
 
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        _premiumUserCollection = mongoDatabase.GetCollection<PremiumUser>(options.Value.Collection);
     }
 
     public async Task<Result> AddPremiumUserAsync(PremiumUser premiumUser)

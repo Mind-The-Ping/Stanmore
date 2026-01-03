@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using Stanmore.Repository.UserRepository;
@@ -11,7 +12,9 @@ public class PremiumUserRepositoryTests
     private readonly IMongoDatabase _mongoDatabase;
     private readonly IMongoCollection<PremiumUser> _premiumUserCollection;
 
-    private readonly IPremiumUserRepository _premiumUserRepository;
+    private readonly ILogger<PremiumUserRepository> _logger;
+    private readonly IOptions<DatabaseOptions> _databaseOptions;
+    private readonly PremiumUserRepository _premiumUserRepository;
 
     private readonly string _databaseName = $"testdb_{Guid.NewGuid():N}";
 
@@ -27,15 +30,51 @@ public class PremiumUserRepositoryTests
             ConnectionString = "mongodb://localhost:27017"
         };
 
-        var logger = NSubstitute.Substitute.For<ILogger<PremiumUserRepository>>();
-        var options = Microsoft.Extensions.Options.Options.Create(databaseOptions);
+        _logger = NSubstitute.Substitute.For<ILogger<PremiumUserRepository>>();
+        _databaseOptions = Options.Create(databaseOptions);
 
-        _premiumUserRepository = new PremiumUserRepository(_mongoDatabase, options, logger);
+        _premiumUserRepository = new PremiumUserRepository(_mongoDatabase, _databaseOptions, _logger);
         _premiumUserCollection = _mongoDatabase.GetCollection<PremiumUser>(databaseOptions.Collection);
     }
     private async Task InitializeAsync()
     {
         await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
+    }
+
+    [Fact]
+    public void PremiumUserRepository_Ctor_NullDatabase_Throws_ArguementNullException()
+    {
+        var exception = Assert
+            .Throws<ArgumentNullException>(() => new PremiumUserRepository(
+                null!,
+                _databaseOptions,
+                _logger));
+
+        exception.Message.Should().Be("Value cannot be null. (Parameter 'mongoDatabase')");
+    }
+
+    [Fact]
+    public void PremiumUserRepository_Ctor_NullDatabaseOptions_Throws_ArguementNullException()
+    {
+        var exception = Assert
+            .Throws<ArgumentNullException>(() => new PremiumUserRepository(
+                _mongoDatabase,
+                null!,
+                _logger));
+
+        exception.Message.Should().Be("Value cannot be null. (Parameter 'options')");
+    }
+
+    [Fact]
+    public void PremiumUserRepository_Ctor_NullLogger_Throws_ArguementNullException()
+    {
+        var exception = Assert
+            .Throws<ArgumentNullException>(() => new PremiumUserRepository(
+                _mongoDatabase,
+                _databaseOptions,
+                null!));
+
+        exception.Message.Should().Be("Value cannot be null. (Parameter 'logger')");
     }
 
     [Fact]
@@ -90,6 +129,19 @@ public class PremiumUserRepositoryTests
     }
 
     [Fact]
+    public async Task PremiumUserRepository_GetPremiumUserAsync_No_User_Fails()
+    {
+        await InitializeAsync();
+
+        var userId = Guid.NewGuid();
+
+        var result = await _premiumUserRepository.GetPremiumUserAsync(userId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be($"User {userId} does not exist.");
+    }
+
+    [Fact]
     public async Task PremiumUserRepository_DeletePreiumUserAsync_Successful()
     {
         await InitializeAsync();
@@ -116,6 +168,19 @@ public class PremiumUserRepositoryTests
     }
 
     [Fact]
+    public async Task PremiumUserRepository_DeletePreiumUserAsync_No_User_Fails()
+    {
+        await InitializeAsync();
+
+        var userId = Guid.NewGuid();
+
+        var result = await _premiumUserRepository.DeletePreiumUserAsync(userId);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be($"Premium user {userId} was not found.");
+    }
+
+    [Fact]
     public async Task PremiumUserRepository_IsUserPremiumAsync_Successful()
     {
         await InitializeAsync();
@@ -133,6 +198,40 @@ public class PremiumUserRepositoryTests
         var result = await _premiumUserRepository.IsUserPremiumAsync(premiumUser.UserId);
         
         result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PremiumUserRepository_IsUserPremiumAsync_No_User_False()
+    {
+
+        await InitializeAsync();
+
+        var userId = Guid.NewGuid();
+
+        var result = await _premiumUserRepository.IsUserPremiumAsync(userId);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PremiumUserRepository_IsUserPremiumAsync_EpiryDate_Past_Now_False()
+    {
+
+        await InitializeAsync();
+
+        var premiumUser = new PremiumUser
+        {
+            UserId = Guid.NewGuid(),
+            PremiumExpiresAt = DateTime.UtcNow.AddDays(-5),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+        await _premiumUserRepository.AddPremiumUserAsync(premiumUser);
+
+        var result = await _premiumUserRepository.IsUserPremiumAsync(premiumUser.UserId);
+
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -163,5 +262,20 @@ public class PremiumUserRepositoryTests
 
         record.PremiumExpiresAt.Should().BeCloseTo(newExpirationDate, TimeSpan.FromSeconds(5));
         record.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task PremiumUserRepository_UpdatePremiumUserExpiryTimeAsync_No_User_Fails()
+    {
+        await InitializeAsync();
+
+        var userId = Guid.NewGuid();
+        var newExpirationDate = DateTime.UtcNow.AddDays(30);
+
+        var result = await _premiumUserRepository
+         .UpdatePremiumUserExpiryTimeAsync(userId, newExpirationDate);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be($"{userId} does not exist.");
     }
 }
