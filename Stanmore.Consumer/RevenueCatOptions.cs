@@ -2,5 +2,5 @@
 
 public class RevenueCatOptions
 {
-    public required Guid Signature { get; set; }
+    public required string Signature { get; set; }
 }

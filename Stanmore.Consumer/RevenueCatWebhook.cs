@@ -3,7 +3,9 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stanmore.Consumer.SubscriptionHandler;
+using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Stanmore.Consumer;
@@ -31,26 +33,26 @@ public class RevenueCatWebhook
         _logger.LogInformation("Start processing a RevenueCatWebhook.");
 
 
-        if (!req.Headers.TryGetValues("X-RevenueCat-Signature", out var signatureValues)) 
+        if (!req.Headers.TryGetValues("Authorization", out var authValues))
         {
-            _logger.LogError("Failed to get the signature out of the header.");
-            return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
         }
 
-        var signature = signatureValues.First();
 
-        if (!Guid.TryParse(signature, out var signatureId)) 
-        {
-            _logger.LogError("Failed to parse the signature as a guid.");
-            return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
+        var authHeader = authValues.First();
+
+        if (!authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) {
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
         }
+
+        var receivedSecret = authHeader["Bearer ".Length..].Trim();
+        var expectedSecret = _options.Signature.Trim();
 
         if (!CryptographicOperations.FixedTimeEquals(
-         signatureId.ToByteArray(),
-         _options.Signature.ToByteArray())) 
+          Encoding.UTF8.GetBytes(receivedSecret),
+          Encoding.UTF8.GetBytes(expectedSecret)))
         {
-            _logger.LogError("Failed the comparison.");
-            return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
         }
 
         string body;
