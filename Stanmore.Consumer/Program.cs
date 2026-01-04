@@ -33,6 +33,12 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddScoped<IPremiumUserRepository, PremiumUserRepository>();
 builder.Services.AddScoped<ISubscriptionEventHandler, SubscriptionEventHandler>();
 
+builder.Services.AddSingleton(sp =>
+{
+    Console.WriteLine("DI container built successfully");
+    return new object();
+});
+
 builder.Services
     .AddApplicationInsightsTelemetryWorkerService()
     .ConfigureFunctionsApplicationInsights();

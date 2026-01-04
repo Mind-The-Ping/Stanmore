@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stanmore.Consumer.SubscriptionHandler;
@@ -27,25 +26,25 @@ public class RevenueCatWebhook
     }
 
     [Function("RevenueCatWebhook")]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)
+    public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
     {
         _logger.LogInformation("Start processing a RevenueCatWebhook.");
 
 
-        if (!req.Headers.TryGetValue("X-RevenueCat-Signature", out var signatureValues)) {
-            return new UnauthorizedResult();
+        if (!req.Headers.TryGetValues("X-RevenueCat-Signature", out var signatureValues)) {
+            return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
         }
 
-        var signature = signatureValues.ToString();
+        var signature = signatureValues.First();
 
         if (!Guid.TryParse(signature, out var signatureId)) {
-            return new UnauthorizedResult();
+            return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
         }
 
         if (!CryptographicOperations.FixedTimeEquals(
          signatureId.ToByteArray(),
          _options.Signature.ToByteArray())) {
-            return new UnauthorizedResult();
+            return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
         }
 
         string body;
@@ -64,26 +63,26 @@ public class RevenueCatWebhook
         catch (JsonException ex)
         {
             _logger.LogError(ex, "Failed to deserialize RevenueCat webhook payload.");
-            return new OkResult();
+            return req.CreateResponse(System.Net.HttpStatusCode.OK);
         }
 
         if (dto == null)
         {
             _logger.LogError("RevenueCatWebhookDto deserialized to null.");
-            return new OkResult();
+            return req.CreateResponse(System.Net.HttpStatusCode.OK);
         }
 
          _logger.LogInformation(
             "Processing RevenueCat event {Type} for user {UserId}",
-            dto.Event.Type,
-            dto.Event.AppUserId);
+            dto.Event?.Type,
+            dto.Event?.AppUserId);
 
         var parseResult = SubscriptionEventParser.Parse(dto);
 
         if (parseResult.IsFailure)
         {
             _logger.LogError(parseResult.Error);
-            return new OkResult();
+            return req.CreateResponse(System.Net.HttpStatusCode.OK);
         }
 
         var handleResult = await _subscriptionEventHandler.HandleAsync(parseResult.Value);
@@ -92,6 +91,6 @@ public class RevenueCatWebhook
             _logger.LogError(handleResult.Error);
         }
 
-        return new OkResult();
+        return req.CreateResponse(System.Net.HttpStatusCode.OK);
     }
 }
