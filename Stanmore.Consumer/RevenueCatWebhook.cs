@@ -31,19 +31,25 @@ public class RevenueCatWebhook
         _logger.LogInformation("Start processing a RevenueCatWebhook.");
 
 
-        if (!req.Headers.TryGetValues("X-RevenueCat-Signature", out var signatureValues)) {
+        if (!req.Headers.TryGetValues("X-RevenueCat-Signature", out var signatureValues)) 
+        {
+            _logger.LogError("Failed to get the signature out of the header.");
             return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
         }
 
         var signature = signatureValues.First();
 
-        if (!Guid.TryParse(signature, out var signatureId)) {
+        if (!Guid.TryParse(signature, out var signatureId)) 
+        {
+            _logger.LogError("Failed to parse the signature as a guid.");
             return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
         }
 
         if (!CryptographicOperations.FixedTimeEquals(
          signatureId.ToByteArray(),
-         _options.Signature.ToByteArray())) {
+         _options.Signature.ToByteArray())) 
+        {
+            _logger.LogError("Failed the comparison.");
             return req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
         }
 
