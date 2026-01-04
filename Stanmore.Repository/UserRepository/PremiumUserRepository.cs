@@ -23,22 +23,6 @@ public class PremiumUserRepository : IPremiumUserRepository
         _premiumUserCollection = mongoDatabase.GetCollection<PremiumUser>(options.Value.Collection);
     }
 
-    public async Task<Result> AddPremiumUserAsync(PremiumUser premiumUser)
-    {
-        try {
-            await _premiumUserCollection.InsertOneAsync(premiumUser);
-        }
-        catch (Exception ex)
-        {
-            var message = $"Could not save the premium user: {premiumUser.UserId}.";
-
-            _logger.LogError(ex, message);
-            return Result.Failure(message);
-        }
-
-        return Result.Success();
-    }
-
     public async Task<Result<PremiumUser>> GetPremiumUserAsync(Guid userId)
     {
         var user = await _premiumUserCollection.
@@ -77,34 +61,29 @@ public class PremiumUserRepository : IPremiumUserRepository
         return user != null && user.PremiumExpiresAt > DateTime.UtcNow;
     }
 
-    public async Task<Result> UpdatePremiumUserExpiryTimeAsync(Guid userId, DateTime premiumExpires)
+    public async Task<Result> UpsertPremiumUserExpiryAsync(Guid userId, DateTime premiumExpiresAt)
     {
+        var filter = Builders<PremiumUser>.Filter.Eq(x => x.UserId, userId);
+
         var update = Builders<PremiumUser>.Update
-               .Set(x => x.UpdatedAt, DateTime.UtcNow)
-               .Set(x => x.PremiumExpiresAt, premiumExpires);
+        .Set(x => x.PremiumExpiresAt, premiumExpiresAt)
+        .Set(x => x.UpdatedAt, DateTime.UtcNow)
+        .SetOnInsert(x => x.CreatedAt, DateTime.UtcNow);
 
         try
         {
-            var updatedUser = await _premiumUserCollection.FindOneAndUpdateAsync(
-             x => x.UserId == userId,
-             update,
-             new FindOneAndUpdateOptions<PremiumUser>
-             {
-                 ReturnDocument = ReturnDocument.After
-             });
-
-            if (updatedUser == null) {
-                return Result.Failure<string>($"{userId} does not exist.");
-            }
+            await _premiumUserCollection.UpdateOneAsync(
+            filter,
+            update,
+            new UpdateOptions { IsUpsert = true });
 
             return Result.Success();
         }
         catch (Exception ex)
         {
-            var message = $"Database could not save the new expiry date for user {userId}.";
-
+            var message = $"Failed to upsert premium expiry for user {userId}.";
             _logger.LogError(ex, message);
-            return Result.Failure<string>(message);
+            return Result.Failure(message);
         }
     }
 }
