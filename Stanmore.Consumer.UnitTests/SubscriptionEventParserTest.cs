@@ -9,16 +9,16 @@ public class SubscriptionEventParserTest
     {
         var userId = Guid.NewGuid();
 
-        var subscriptionDto = new SubscriptionEventDto
+        var webhookDto = new RevenueCatWebhookDto
         {
-            _event = new Event()
+            Event = new RevenueCatEventDto()
         };
 
-        subscriptionDto._event.app_user_id = userId.ToString();
-        subscriptionDto._event.type = "TEST";
-        subscriptionDto._event.expiration_at_ms = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        webhookDto.Event.AppUserId = userId.ToString();
+        webhookDto.Event.Type = "TEST";
+        webhookDto.Event.ExpiresAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        var result = SubscriptionEventParser.Parse(subscriptionDto);
+        var result = SubscriptionEventParser.Parse(webhookDto);
         result.IsSuccess.Should().BeTrue();
         result.Value.UserId.Should().Be(userId);
         result.Value.EventType.Should().Be(EventType.Test);
@@ -36,9 +36,9 @@ public class SubscriptionEventParserTest
     [Fact]
     public void SubscriptionEventParser_Parse_Fails_Payload_Null_Event()
     {
-        var subscriptionDto = new SubscriptionEventDto();
+        var webhookDto = new RevenueCatWebhookDto();
 
-        var result = SubscriptionEventParser.Parse(subscriptionDto);
+        var result = SubscriptionEventParser.Parse(webhookDto);
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be("Event payload was null.");
     }
@@ -48,39 +48,38 @@ public class SubscriptionEventParserTest
     {
         var wrongId = "12345";
 
-        var subscriptionDto = new SubscriptionEventDto
+        var webhookDto = new RevenueCatWebhookDto
         {
-            _event = new Event()
+            Event = new RevenueCatEventDto()
         };
 
-        subscriptionDto._event.app_user_id = wrongId;
-        subscriptionDto._event.type = "TEST";
-        subscriptionDto._event.expiration_at_ms = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        webhookDto.Event.AppUserId = wrongId;
+        webhookDto.Event.Type = "TEST";
+        webhookDto.Event.ExpiresAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        var result = SubscriptionEventParser.Parse(subscriptionDto);
+        var result = SubscriptionEventParser.Parse(webhookDto);
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be($"Could not parse {wrongId} as a guid.");
     }
 
-    [Fact]
-    public void SubscriptionEventParser_Parse_Expiration_0_Null_ExpirationDate()
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null!)]
+    public void SubscriptionEventParser_Parse_Fails_Blank_UserId(string? wrongId)
     {
-        var userId = Guid.NewGuid();
-
-        var subscriptionDto = new SubscriptionEventDto
+        var webhookDto = new RevenueCatWebhookDto
         {
-            _event = new Event()
+            Event = new RevenueCatEventDto()
         };
 
-        subscriptionDto._event.app_user_id = userId.ToString();
-        subscriptionDto._event.type = "TEST";
-        subscriptionDto._event.expiration_at_ms = 0;
+        webhookDto.Event.AppUserId = wrongId!;
+        webhookDto.Event.Type = "TEST";
+        webhookDto.Event.ExpiresAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        var result = SubscriptionEventParser.Parse(subscriptionDto);
-        result.IsSuccess.Should().BeTrue();
-        result.Value.UserId.Should().Be(userId);
-        result.Value.EventType.Should().Be(EventType.Test);
-        result.Value.ExpirationDate.Should().BeNull();
+        var result = SubscriptionEventParser.Parse(webhookDto);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("app_user_id was missing.");
     }
 
     [Fact]
@@ -89,16 +88,16 @@ public class SubscriptionEventParserTest
         var userId = Guid.NewGuid();
         var eventType = "FREE";
 
-        var subscriptionDto = new SubscriptionEventDto
+        var webhookDto = new RevenueCatWebhookDto
         {
-            _event = new Event()
+            Event = new RevenueCatEventDto()
         };
 
-        subscriptionDto._event.app_user_id = userId.ToString();
-        subscriptionDto._event.type = eventType;
-        subscriptionDto._event.expiration_at_ms = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        webhookDto.Event.AppUserId = userId.ToString();
+        webhookDto.Event.Type = eventType;
+        webhookDto.Event.ExpiresAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        var result = SubscriptionEventParser.Parse(subscriptionDto);
+        var result = SubscriptionEventParser.Parse(webhookDto);
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be($"Unhandled RevenueCat event type: {eventType}.");
     }

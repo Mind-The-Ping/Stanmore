@@ -78,19 +78,46 @@ public class PremiumUserRepositoryTests
     }
 
     [Fact]
-    public async Task PremiumUserRepository_AddPremiumUserAsync_Successful()
+    public async Task PremiumUserRepository_UpsertPremiumUserExpiryAsync_AddUser_Successful()
     {
         await InitializeAsync();
 
-        var premiumUser = new PremiumUser 
-        { 
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(30);
+
+        var result = await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
+
+        result.IsSuccess.Should().BeTrue();
+
+        var record = await _premiumUserCollection
+           .Find(x => x.UserId == userId)
+           .SingleOrDefaultAsync();
+
+        record.UserId.Should().Be(userId);
+        record.PremiumExpiresAt.Should().BeCloseTo(premiumExpiresAt, TimeSpan.FromSeconds(5));
+        record.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        record.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task PremiumUserRepository_UpsertPremiumUserExpiryAsync_UpdateUser_Successful()
+    {
+        await InitializeAsync();
+
+        var premiumUser = new PremiumUser
+        {
             UserId = Guid.NewGuid(),
-            PremiumExpiresAt = DateTime.UtcNow.AddDays(30),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            PremiumExpiresAt = DateTime.UtcNow.AddDays(-1),
+            CreatedAt = DateTime.UtcNow.AddDays(-30),
+            UpdatedAt = DateTime.UtcNow.AddDays(-30),
         };
 
-        var result = await _premiumUserRepository.AddPremiumUserAsync(premiumUser);
+        await _premiumUserCollection.InsertOneAsync(premiumUser);
+
+        var premiumExpiresAt = DateTime.UtcNow;
+        var result = await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(premiumUser.UserId, premiumExpiresAt);
 
         result.IsSuccess.Should().BeTrue();
 
@@ -99,9 +126,9 @@ public class PremiumUserRepositoryTests
            .SingleOrDefaultAsync();
 
         record.UserId.Should().Be(premiumUser.UserId);
-        record.PremiumExpiresAt.Should().BeCloseTo(premiumUser.PremiumExpiresAt, TimeSpan.FromSeconds(5));
+        record.PremiumExpiresAt.Should().BeCloseTo(premiumExpiresAt, TimeSpan.FromSeconds(5));
         record.CreatedAt.Should().BeCloseTo(premiumUser.CreatedAt, TimeSpan.FromSeconds(5));
-        record.UpdatedAt.Should().BeCloseTo(premiumUser.UpdatedAt, TimeSpan.FromSeconds(5));
+        record.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -109,23 +136,19 @@ public class PremiumUserRepositoryTests
     {
         await InitializeAsync();
 
-        var premiumUser = new PremiumUser
-        {
-            UserId = Guid.NewGuid(),
-            PremiumExpiresAt = DateTime.UtcNow.AddDays(30),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(30);
 
-        await _premiumUserRepository.AddPremiumUserAsync(premiumUser);
+        await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
 
-        var result = await _premiumUserRepository.GetPremiumUserAsync(premiumUser.UserId);
+        var result = await _premiumUserRepository.GetPremiumUserAsync(userId);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.UserId.Should().Be(premiumUser.UserId);
-        result.Value.PremiumExpiresAt.Should().BeCloseTo(premiumUser.PremiumExpiresAt, TimeSpan.FromSeconds(5));
-        result.Value.CreatedAt.Should().BeCloseTo(premiumUser.CreatedAt, TimeSpan.FromSeconds(5));
-        result.Value.UpdatedAt.Should().BeCloseTo(premiumUser.UpdatedAt, TimeSpan.FromSeconds(5));
+        result.Value.UserId.Should().Be(userId);
+        result.Value.PremiumExpiresAt.Should().BeCloseTo(premiumExpiresAt, TimeSpan.FromSeconds(5));
+        result.Value.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        result.Value.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -146,22 +169,18 @@ public class PremiumUserRepositoryTests
     {
         await InitializeAsync();
 
-        var premiumUser = new PremiumUser
-        {
-            UserId = Guid.NewGuid(),
-            PremiumExpiresAt = DateTime.UtcNow.AddDays(30),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(30);
 
-        await _premiumUserRepository.AddPremiumUserAsync(premiumUser);
+        await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
 
-        var result = await _premiumUserRepository.DeletePreiumUserAsync(premiumUser.UserId);
+        var result = await _premiumUserRepository.DeletePreiumUserAsync(userId);
 
         result.IsSuccess.Should().BeTrue();
 
         var record = await _premiumUserCollection
-           .Find(x => x.UserId == premiumUser.UserId)
+           .Find(x => x.UserId == userId)
            .SingleOrDefaultAsync();
 
         record.Should().BeNull();
@@ -185,17 +204,13 @@ public class PremiumUserRepositoryTests
     {
         await InitializeAsync();
 
-        var premiumUser = new PremiumUser
-        {
-            UserId = Guid.NewGuid(),
-            PremiumExpiresAt = DateTime.UtcNow.AddDays(30),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(30);
 
-        await _premiumUserRepository.AddPremiumUserAsync(premiumUser);
+        await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
 
-        var result = await _premiumUserRepository.IsUserPremiumAsync(premiumUser.UserId);
+        var result = await _premiumUserRepository.IsUserPremiumAsync(userId);
         
         result.Should().BeTrue();
     }
@@ -219,63 +234,14 @@ public class PremiumUserRepositoryTests
 
         await InitializeAsync();
 
-        var premiumUser = new PremiumUser
-        {
-            UserId = Guid.NewGuid(),
-            PremiumExpiresAt = DateTime.UtcNow.AddDays(-5),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(-5);
 
-        await _premiumUserRepository.AddPremiumUserAsync(premiumUser);
+        await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
 
-        var result = await _premiumUserRepository.IsUserPremiumAsync(premiumUser.UserId);
+        var result = await _premiumUserRepository.IsUserPremiumAsync(userId);
 
         result.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task PremiumUserRepository_UpdatePremiumUserExpiryTimeAsync_Successful()
-    {
-        await InitializeAsync();
-
-        var newExpirationDate = DateTime.UtcNow.AddDays(30);
-
-        var premiumUser = new PremiumUser
-        {
-            UserId = Guid.NewGuid(),
-            PremiumExpiresAt = DateTime.UtcNow.AddDays(1),
-            CreatedAt = DateTime.UtcNow.AddDays(-30),
-            UpdatedAt = DateTime.UtcNow.AddDays(-30),
-        };
-
-        await _premiumUserRepository.AddPremiumUserAsync(premiumUser);
-
-        var result = await _premiumUserRepository
-            .UpdatePremiumUserExpiryTimeAsync(premiumUser.UserId, newExpirationDate);
-
-        result.IsSuccess.Should().BeTrue();
-
-        var record = await _premiumUserCollection
-           .Find(x => x.UserId == premiumUser.UserId)
-           .SingleOrDefaultAsync();
-
-        record.PremiumExpiresAt.Should().BeCloseTo(newExpirationDate, TimeSpan.FromSeconds(5));
-        record.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
-    }
-
-    [Fact]
-    public async Task PremiumUserRepository_UpdatePremiumUserExpiryTimeAsync_No_User_Fails()
-    {
-        await InitializeAsync();
-
-        var userId = Guid.NewGuid();
-        var newExpirationDate = DateTime.UtcNow.AddDays(30);
-
-        var result = await _premiumUserRepository
-         .UpdatePremiumUserExpiryTimeAsync(userId, newExpirationDate);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be($"{userId} does not exist.");
     }
 }

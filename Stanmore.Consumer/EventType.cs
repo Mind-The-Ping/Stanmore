@@ -15,7 +15,6 @@ public enum EventType
     Transfer,
     SubscriptionExtended,
     TemporaryEntitlementGrant,
-    RefundReversed,
     VirtualCurrencyTransaction,
     Experiment_Enrollment,
 }
