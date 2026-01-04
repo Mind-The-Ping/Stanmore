@@ -11,12 +11,12 @@ namespace Stanmore.Consumer;
 
 public class RevenueCatWebhook
 {
-    private readonly SubscriptionEventHandler _subscriptionEventHandler;
+    private readonly ISubscriptionEventHandler _subscriptionEventHandler;
     private readonly RevenueCatOptions _options;
     private readonly ILogger<RevenueCatWebhook> _logger;
 
     public RevenueCatWebhook(
-        SubscriptionEventHandler subscriptionEventHandler,
+        ISubscriptionEventHandler subscriptionEventHandler,
         IOptions<RevenueCatOptions> options,
         ILogger<RevenueCatWebhook> logger)
     {
