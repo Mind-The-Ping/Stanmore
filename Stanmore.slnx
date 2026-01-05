@@ -5,6 +5,7 @@
     <Project Path="Stanmore.Repository/Stanmore.Repository.csproj" Id="d42d006e-592c-4aa7-8866-0f0b86f793da" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="Stanmore.API.IntegrationTests/Stanmore.API.IntegrationTests.csproj" Id="dd8b5a09-0adb-49ac-8b2a-13d21f6d1739" />
     <Project Path="Stanmore.Consumer.UnitTests/Stanmore.Consumer.UnitTests.csproj" Id="da92ba4a-4949-408b-915e-f558d3d37eee" />
     <Project Path="Stanmore.Repository.IntegrationTests/Stanmore.Repository.IntegrationTests.csproj" Id="1c64b5bb-7ead-4132-9fe9-0e41a9d99d83" />
   </Folder>
