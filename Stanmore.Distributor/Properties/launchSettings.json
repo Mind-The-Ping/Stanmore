@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Stanmore.Distributor": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7053",
+      "launchBrowser": false
+    }
+  }
+}

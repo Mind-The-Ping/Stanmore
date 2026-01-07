@@ -9,6 +9,8 @@ public class PremiumUser
     [property: BsonRepresentation(BsonType.String)]
     public Guid UserId { get; set; }
     public DateTime PremiumExpiresAt { get; set; }
+    public bool CleanupCompleted { get; set; }
+    public DateTime? CleanupCompletedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

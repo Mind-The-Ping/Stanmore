@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="Stanmore.API/Stanmore.API.csproj" />
     <Project Path="Stanmore.Consumer/Stanmore.Consumer.csproj" />
+    <Project Path="Stanmore.Distributor/Stanmore.Distributor.csproj" Id="df7d2905-027f-4c0f-82cb-3bb072c6bfbe" />
     <Project Path="Stanmore.Repository/Stanmore.Repository.csproj" Id="d42d006e-592c-4aa7-8866-0f0b86f793da" />
   </Folder>
   <Folder Name="/test/">

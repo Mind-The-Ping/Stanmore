@@ -96,8 +96,10 @@ public class PremiumUserRepositoryTests
 
         record.UserId.Should().Be(userId);
         record.PremiumExpiresAt.Should().BeCloseTo(premiumExpiresAt, TimeSpan.FromSeconds(5));
+        record.CleanupCompleted.Should().BeFalse();
         record.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         record.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        record.CleanupCompletedAt.Should().BeNull();
     }
 
     [Fact]
@@ -218,7 +220,6 @@ public class PremiumUserRepositoryTests
     [Fact]
     public async Task PremiumUserRepository_IsUserPremiumAsync_No_User_False()
     {
-
         await InitializeAsync();
 
         var userId = Guid.NewGuid();
@@ -231,7 +232,6 @@ public class PremiumUserRepositoryTests
     [Fact]
     public async Task PremiumUserRepository_IsUserPremiumAsync_EpiryDate_Past_Now_False()
     {
-
         await InitializeAsync();
 
         var userId = Guid.NewGuid();
@@ -243,5 +243,63 @@ public class PremiumUserRepositoryTests
         var result = await _premiumUserRepository.IsUserPremiumAsync(userId);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PremiumUserRepository_GetExpiredUsersAsync_Expired_Successful()
+    {
+        await InitializeAsync();
+
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(-1);
+
+        await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
+
+        var result = await _premiumUserRepository.GetExpiredUsersAsync(DateTime.UtcNow);
+
+        result.Count().Should().Be(1);
+        result.First().UserId.Should().Be(userId);
+    }
+
+    [Fact]
+    public async Task PremiumUserRepository_GetExpiredUsersAsync_Not_Expired_Successful()
+    {
+        await InitializeAsync();
+
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(30);
+
+        await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
+
+        var result = await _premiumUserRepository.GetExpiredUsersAsync(DateTime.UtcNow);
+
+        result.Count().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task PremiumUserRepository_MarkUserCleanUpCompletedAsync_Successful()
+    {
+        await InitializeAsync();
+
+        var userId = Guid.NewGuid();
+        var premiumExpiresAt = DateTime.UtcNow.AddDays(-1);
+
+        await _premiumUserRepository
+            .UpsertPremiumUserExpiryAsync(userId, premiumExpiresAt);
+
+        var result = await _premiumUserRepository.MarkUserCleanUpCompletedAsync(userId);
+
+        result.IsSuccess.Should().BeTrue();
+
+        var record = await _premiumUserCollection
+           .Find(x => x.UserId == userId)
+           .SingleOrDefaultAsync();
+
+        record.UserId.Should().Be(userId);
+        record.CleanupCompleted.Should().BeTrue();
+        record.CleanupCompletedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        record.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 }
