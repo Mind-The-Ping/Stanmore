@@ -68,6 +68,8 @@ public class PremiumUserRepository : IPremiumUserRepository
         var update = Builders<PremiumUser>.Update
         .Set(x => x.PremiumExpiresAt, premiumExpiresAt)
         .Set(x => x.UpdatedAt, DateTime.UtcNow)
+        .Set(x => x.CleanupCompleted, false)
+        .Set(x => x.CleanupCompletedAt, null)
         .SetOnInsert(x => x.CreatedAt, DateTime.UtcNow);
 
         try
@@ -82,6 +84,37 @@ public class PremiumUserRepository : IPremiumUserRepository
         catch (Exception ex)
         {
             var message = $"Failed to upsert premium expiry for user {userId}.";
+            _logger.LogError(ex, message);
+            return Result.Failure(message);
+        }
+    }
+
+    public async Task<IEnumerable<PremiumUser>> GetExpiredUsersAsync(DateTime cutoff)
+    {
+        var users = await _premiumUserCollection.
+           Find(x => x.PremiumExpiresAt < cutoff && !x.CleanupCompleted)
+           .ToListAsync();
+
+        return users;
+    }
+
+    public async Task<Result> MarkUserCleanUpCompletedAsync(Guid userId)
+    {
+        var filter = Builders<PremiumUser>.Filter.Eq(x => x.UserId, userId);
+
+        var update = Builders<PremiumUser>.Update
+          .Set(x => x.CleanupCompleted, true)
+          .Set(x => x.CleanupCompletedAt, DateTime.UtcNow)
+          .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+        try
+        {
+            await _premiumUserCollection.UpdateOneAsync(filter, update);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            var message = $"Failed to mark user {userId} for clean up.";
             _logger.LogError(ex, message);
             return Result.Failure(message);
         }
