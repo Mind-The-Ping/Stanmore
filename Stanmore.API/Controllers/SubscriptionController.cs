@@ -32,7 +32,9 @@ public class SubscriptionController : ControllerBase
             return BadRequest("Can not access endpoint without logging in.");
         }
 
-        return Ok(await _repository.IsUserPremiumAsync(userId));
+        var result = await _repository.IsUserPremiumAsync(userId);
+
+        return Ok(new {isUserPremium = result});
     }
 
     [Authorize]
